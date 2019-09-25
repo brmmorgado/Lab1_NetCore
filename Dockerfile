@@ -1,22 +1,17 @@
-FROM microsoft/dotnet:2.2-aspnetcore-runtime AS base
+FROM microsoft/dotnet:2.2-sdk-alpine AS build-env
 WORKDIR /app
-EXPOSE 80
 
-FROM microsoft/dotnet:2.2-sdk AS build
-WORKDIR .
-COPY *.sln ./
-COPY ./TesteApi.Api.csproj .
-RUN echo $(ls)
-RUN dotnet restore TesteApi.Api.csproj
+# Copiar csproj e restaurar dependencias
+COPY *.csproj ./
+RUN dotnet restore
 
-COPY . .
-WORKDIR .
-RUN dotnet build TesteApi.Api.csproj -c Release -o /app
+# Build da aplicacao
+COPY . ./
+#RUN chmod 777 
+RUN dotnet publish -c Release -o out
 
-FROM build AS publish
-RUN dotnet publish TesteApi.Api.csproj -c Release -o /app
-
-FROM base AS final
+# Build da imagem
+FROM microsoft/dotnet:2.2-aspnetcore-runtime-alpine
 WORKDIR /app
-COPY --from=publish /app .
+COPY --from=build-env /app/out .
 ENTRYPOINT ["dotnet", "TesteApi.Api.dll"]
